@@ -1,0 +1,20 @@
+{
+  "name": "dropvault",
+  "module": "index.ts",
+  "type": "module",
+  "private": true,
+  "workspaces": [
+    "frontend",
+    "backend"
+  ],
+  "devDependencies": {
+    "@types/bun": "latest",
+    "concurrently": "^10.0.5"
+  },
+  "scripts": {
+    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\""
+  },
+  "peerDependencies": {
+    "typescript": "^5"
+  }
+}
