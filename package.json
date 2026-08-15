@@ -12,7 +12,9 @@
     "concurrently": "^10.0.5"
   },
   "scripts": {
-    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\""
+    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\"",
+    "migrate": "cd backend && bun run db:generate",
+    "push_changes": "cd backend && bun run db:push"
   },
   "peerDependencies": {
     "typescript": "^5"

@@ -1,14 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
-
-function Loader() {
-  return (
-    <div className="flex min-h-screen items-center justify-center">
-      <div className="h-8 w-8 animate-spin rounded-full border-4 border-gray-300 border-t-black" />
-    </div>
-  );
-}
+import { Loader } from "./(components)/Loader";
 
 export default function Home() {
   const [fetchedData, setFetchedData] = useState<string | null>(null);
@@ -17,7 +10,7 @@ export default function Home() {
 
   async function getData() {
     try {
-      const req = await fetch("/api/v1/hello");
+      const req = await fetch(`${process.env.BACKEND_BASE_URL}/api/v1/hello`);
 
       if (!req.ok) {
         throw new Error(`HTTP ${req.status}`);
