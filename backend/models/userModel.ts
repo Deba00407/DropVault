@@ -5,7 +5,10 @@ const UserTable = p.pgTable("users", {
     name: p.text().notNull(),
 
     created_At: p.timestamp().defaultNow(),
-    updated_At: p.timestamp().defaultNow().$onUpdate(() => new Date())
+    updated_At: p.timestamp().defaultNow().$onUpdate(() => new Date()),
+
+    email: p.text().unique().notNull(),
+    password: p.text().notNull()
 });
 
 type InsertUser = typeof UserTable.$inferInsert

@@ -18,5 +18,8 @@
   },
   "peerDependencies": {
     "typescript": "^5"
+  },
+  "dependencies": {
+    "better-auth": "^1.6.29"
   }
 }

@@ -10,7 +10,7 @@ export default function Home() {
 
   async function getData() {
     try {
-      const req = await fetch(`${process.env.BACKEND_BASE_URL}/api/v1/hello`);
+      const req = await fetch('/api/v1/hello');
 
       if (!req.ok) {
         throw new Error(`HTTP ${req.status}`);
