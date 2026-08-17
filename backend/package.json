@@ -6,14 +6,16 @@
   "scripts": {
     "dev": "bun --watch index.ts",
     "db:generate": "bunx drizzle-kit generate --config config/drizzle.config.ts",
-    "db:push": "bunx drizzle-kit push --config config/drizzle.config.ts"
+    "db:push": "bunx drizzle-kit push --config config/drizzle.config.ts",
+    "test": "vitest test"
   },
   "devDependencies": {
     "@types/bun": "latest",
     "@types/pg": "^8.21.0",
     "drizzle-kit": "^1.0.0-rc.4",
     "drizzle-orm": "^1.0.0-rc.4",
-    "pg": "^8.23.0"
+    "pg": "^8.23.0",
+    "vitest": "^4.1.10"
   },
   "peerDependencies": {
     "typescript": "^5"
