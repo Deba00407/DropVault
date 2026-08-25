@@ -5,7 +5,13 @@ import {
     text,
     integer,
     timestamp,
+    pgEnum,
 } from "drizzle-orm/pg-core";
+
+
+const docProcessingStatus = pgEnum('doc_status', ["UPLOADED", "QUEUED", "PROCESSING", "READY", "FAILED"]);
+
+export type DocProcessingStatus = (typeof docProcessingStatus.enumValues)[number];
 
 export const fileMetadata = pgTable("file_metadata", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -18,5 +24,9 @@ export const fileMetadata = pgTable("file_metadata", {
 
     fileSize: integer("file_size"),
 
+    status: docProcessingStatus('doc_current_status').default('UPLOADED'),
+
     createdAt: timestamp("created_at").defaultNow().notNull(),
+
+    processedAt: timestamp("processed_at").defaultNow().notNull()
 });

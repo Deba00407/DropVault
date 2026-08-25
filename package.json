@@ -14,7 +14,7 @@
     "frontend": "workspace:*"
   },
   "scripts": {
-    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\"",
+    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\"  \"bun --cwd backend worker\"",
     "migrate": "cd backend && bun run db:generate",
     "push_changes": "cd backend && bun run db:push"
   },
