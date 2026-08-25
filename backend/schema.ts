@@ -1,1 +1,1 @@
-export * from "./models/userModel"
+export { fileMetadata } from "./models/fileMetaDataModel"

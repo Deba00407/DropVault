@@ -155,6 +155,20 @@ const DashBoard = () => {
         patchTicket(id, { progress: Math.max(10, pct) });
       });
 
+      const saveRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_BASE_URL}/api/v1/file/save`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        credentials: "include",
+        body: JSON.stringify({
+          fileKey,
+          fileName: file.name,
+          contentType: file.type || "application/pdf",
+          fileSize: file.size,
+        }),
+      });
+
+      if (!saveRes.ok) throw new Error("Upload succeeded but logging failed");
+
       patchTicket(id, { status: "done", progress: 100, loggedAt: new Date() });
     } catch (err) {
       patchTicket(id, {

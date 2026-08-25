@@ -8,7 +8,7 @@ import crypto from 'crypto'
 const router = Router();
 
 const generateFileKey = (mime: string) => {
-    return `users/files/${crypto.randomUUID()}_${mime}`;
+    return `${crypto.randomUUID()}.${mime}`;
 };
 
 type SignatureInput = {
