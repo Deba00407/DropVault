@@ -8,6 +8,7 @@
     "worker": "bun --watch workers/index.ts",
     "db:generate": "bunx drizzle-kit generate --config config/drizzle.config.ts",
     "db:push": "bunx drizzle-kit push --config config/drizzle.config.ts",
+    "db:migrate": "bunx drizzle-kit migrate --config config/drizzle.config.ts",
     "test": "vitest test"
   },
   "devDependencies": {

@@ -42,9 +42,6 @@ async function pollQueue() {
 
             for (const message of response.Messages) {
                 processingHandler.handleIncomingMessage(message);
-
-                // Processing will be added here.
-                // Do NOT delete the message yet.
             }
         } catch (error) {
             console.error("Error polling SQS:", error);

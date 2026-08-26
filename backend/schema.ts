@@ -1,1 +1,0 @@
-export { fileMetadata } from "./models/fileMetaDataModel"

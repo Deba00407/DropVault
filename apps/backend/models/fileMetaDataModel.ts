@@ -5,13 +5,9 @@ import {
     text,
     integer,
     timestamp,
-    pgEnum,
 } from "drizzle-orm/pg-core";
 
-
-const docProcessingStatus = pgEnum('doc_status', ["UPLOADED", "QUEUED", "PROCESSING", "READY", "FAILED"]);
-
-export type DocProcessingStatus = (typeof docProcessingStatus.enumValues)[number];
+import { docProcessingStatus } from "./docProcessingStatus";
 
 export const fileMetadata = pgTable("file_metadata", {
     id: uuid("id").defaultRandom().primaryKey(),

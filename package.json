@@ -14,7 +14,11 @@
     "frontend": "workspace:*"
   },
   "scripts": {
-    "dev": "concurrently \"bun --cwd frontend dev\" \"bun --cwd backend dev\"  \"bun --cwd backend worker\"",
+    "run:frontend": "bun --cwd apps/frontend dev",
+    "run:backend": "bun --cwd apps/backend dev",
+    "run:worker": "bun --cwd apps/backend worker",
+    "run:ai": "cd apps/ai && uv run src/main.py",
+    "dev": "concurrently \"bun run run:frontend\" \"bun run run:backend\" \"bun run run:worker\" \"bun run run:ai\"",
     "migrate": "cd backend && bun run db:generate",
     "push_changes": "cd backend && bun run db:push"
   },
