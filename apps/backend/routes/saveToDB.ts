@@ -1,21 +1,12 @@
 import { Router, type Request, type Response } from "express";
-import { fromNodeHeaders } from "better-auth/node";
-import { auth } from "../lib/auth";
 import { db } from "../db";
 import { fileMetadata } from "../models/fileMetaDataModel";
 import { StatusCodes } from "http-status-codes"
+import { eq } from "drizzle-orm";
 
 const dbSaveRouter = Router();
 
 dbSaveRouter.post("/save", async (req: Request, res: Response) => {
-    const session = await auth.api.getSession({
-        headers: fromNodeHeaders(req.headers),
-    });
-
-    if (!session) {
-        return res.status(StatusCodes.UNAUTHORIZED).json({ error: "Unauthorized" });
-    }
-
     const { fileKey, fileName, contentType, fileSize } = req.body;
 
     if (!fileKey || !fileName) {
@@ -34,6 +25,21 @@ dbSaveRouter.post("/save", async (req: Request, res: Response) => {
         .returning();
 
     return res.status(StatusCodes.CREATED).json(record);
+});
+
+// list out all user documents
+dbSaveRouter.get("/list", async (req: Request, res: Response) => {
+    const userId = req.userId;
+
+    const documents = await db
+        .select()
+        .from(fileMetadata)
+        .where(eq(fileMetadata.owner_id, userId))
+
+    return res.status(StatusCodes.OK)
+        .json({
+            documents
+        });
 });
 
 export { dbSaveRouter };

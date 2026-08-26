@@ -7,6 +7,7 @@ import { Button } from "@/components/ui/button";
 import { Card, CardContent } from "@/components/ui/card";
 import { Progress } from "@/components/ui/progress";
 import { cn } from "@/lib/utils";
+import { NavBar } from "./NavBar";
 
 type TicketStatus = "signing" | "uploading" | "done" | "error";
 
@@ -139,6 +140,7 @@ const DashBoard = () => {
       const signRes = await fetch(`${process.env.NEXT_PUBLIC_BACKEND_BASE_URL}/api/v1/pre-sign/signature`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
+        credentials: "include",
         body: JSON.stringify({ mime : file.type.split('/').pop() || "application/pdf" }),
       });
 
@@ -204,7 +206,7 @@ const DashBoard = () => {
 
   return (
     <div className="min-h-screen bg-[#F4F1E8] text-[#1C1B18]">
-      <header className="flex flex-wrap items-baseline justify-between gap-3 border-b border-[#DBD5C6] px-6 py-6 md:px-16">
+      <header className="flex flex-wrap items-center justify-between gap-3 border-b border-[#DBD5C6] px-6 py-4 md:px-16">
         <div className="flex items-baseline gap-3">
           <h1 className="font-serif text-2xl font-semibold tracking-tight text-[#1C1B18]">
             DropVault
@@ -213,7 +215,10 @@ const DashBoard = () => {
             Document Receiving
           </span>
         </div>
-        <div className="font-mono text-xs text-[#5C5747]">{loggedCount} logged today</div>
+        <div className="flex items-center gap-4">
+          <NavBar />
+          <div className="font-mono text-xs text-[#5C5747]">{loggedCount} logged today</div>
+        </div>
       </header>
 
       <main className="mx-auto max-w-3xl px-6 py-10 md:px-16">

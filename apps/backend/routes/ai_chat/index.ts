@@ -1,9 +1,10 @@
 import { Router, type Request, type Response } from "express";
-import { createSessionSchema } from "../../dtos/createSessionSession";
+import { createSessionSchema } from "../../dtos/createSessionSchema";
 
 import { StatusCodes } from "http-status-codes"
 import { db } from "../../db";
 import { SessionDataModel } from "../../models/sessionDataModel";
+import { chatHandler } from "./chatHandler";
 
 const chatRouter = Router();
 
@@ -48,6 +49,17 @@ chatRouter.post("/create/chat-session", async (req: Request, res: Response) => {
     }
 })
 
+chatRouter.post("/ask", async (req: Request, res: Response) => {
+
+    const { query, limit } = await req.body();
+
+    const response = chatHandler.getRequiredChunksForModelContext(query, limit);
+
+    return res.status(StatusCodes.OK)
+        .json({
+            response
+        })
+})
 
 
 export { chatRouter }

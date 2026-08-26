@@ -13,7 +13,7 @@ export default function Home() {
       const req = await fetch('/hello');
 
       if (!req.ok) {
-        throw new Error(`HTTP ${req.status}`);
+        console.error(`HTTP ${req.status}`);
       }
 
       const data = await req.json();
