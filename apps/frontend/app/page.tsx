@@ -10,7 +10,7 @@ export default function Home() {
 
   async function getData() {
     try {
-      const req = await fetch('/api/v1/hello');
+      const req = await fetch('/hello');
 
       if (!req.ok) {
         throw new Error(`HTTP ${req.status}`);
@@ -20,7 +20,7 @@ export default function Home() {
 
       setFetchedData(data.message);
     } catch (error) {
-      const msg = "Failed to fetch data at /api/v1/hello";
+      const msg = "Failed to fetch data at /hello";
       console.error(error);
       setError(msg);
     } finally {

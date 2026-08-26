@@ -8,6 +8,7 @@ import {
 } from "drizzle-orm/pg-core";
 
 import { docProcessingStatus } from "./docProcessingStatus";
+import { users } from "../auth-schema";
 
 export const fileMetadata = pgTable("file_metadata", {
     id: uuid("id").defaultRandom().primaryKey(),
@@ -16,6 +17,12 @@ export const fileMetadata = pgTable("file_metadata", {
 
     objectKey: text("object_key").notNull().unique(),
 
+    owner_id: varchar("owner_id")
+            .notNull()
+            .references(() => users.id, {
+                onDelete: "cascade"
+            }),
+            
     contentType: varchar("content_type", { length: 100 }),
 
     fileSize: integer("file_size"),

@@ -7,7 +7,7 @@ import { s3client as client} from "../config/aws_config";
 
 import crypto from 'crypto'
 
-const router = Router();
+const preSignRouter = Router();
 
 const generateFileKey = (mime: string) => {
     return `${crypto.randomUUID()}.${mime}`;
@@ -25,7 +25,7 @@ const presignUrlWithClient = ({bucket, key} : SignatureInput) => {
     });
 } 
 
-router.post("/signature", async (req: Request, res: Response, next) => {
+preSignRouter.post("/signature", async (req: Request, res: Response, next) => {
 
     const { mime } = req.body;
     const fileName = generateFileKey(mime);
@@ -43,4 +43,4 @@ router.post("/signature", async (req: Request, res: Response, next) => {
     next();
 })
 
-export {router}
+export { preSignRouter }

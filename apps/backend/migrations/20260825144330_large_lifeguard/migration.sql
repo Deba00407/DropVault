@@ -1,1 +1,0 @@
-ALTER TYPE "doc_status" ADD VALUE 'CHUNKED';
