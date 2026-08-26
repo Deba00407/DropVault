@@ -35,6 +35,24 @@ type FileMetadata = {
   processedAt: string;
 };
 
+type DocumentSession = {
+  id: string;
+  title: string;
+  user_id: string;
+  document_id: string;
+  created_at: string;
+  updated_at: string;
+};
+
+type ConversationEntry = {
+  id: string;
+  session_id: string;
+  conversation_type: "user" | "model";
+  content: string;
+  created_at: string;
+  updated_at: string;
+};
+
 async function apiRequest<T>(
   endpoint: string,
   options: RequestInit = {}
@@ -74,4 +92,41 @@ export async function getFileMetadata(): Promise<FileMetadata[]> {
   return apiRequest<FileMetadata[]>("/api/v1/file/list");
 }
 
-export type { ChatSession, SearchResult, CreateSessionResponse, AskResponse, FileMetadata };
+export async function getDocumentSessions(
+  documentId: string
+): Promise<{ sessions: DocumentSession[] }> {
+  return apiRequest<{ sessions: DocumentSession[] }>(
+    `/api/v1/document-chat/sessions?documentId=${encodeURIComponent(documentId)}`
+  );
+}
+
+export async function createDocumentSession(
+  title: string,
+  documentId: string
+): Promise<{ session: DocumentSession }> {
+  return apiRequest<{ session: DocumentSession }>(
+    "/api/v1/document-chat/sessions",
+    {
+      method: "POST",
+      body: JSON.stringify({ title, documentId }),
+    }
+  );
+}
+
+export async function getSessionConversations(
+  sessionId: string
+): Promise<{ conversations: ConversationEntry[] }> {
+  return apiRequest<{ conversations: ConversationEntry[] }>(
+    `/api/v1/document-chat/sessions/${sessionId}/conversations`
+  );
+}
+
+export type {
+  ChatSession,
+  SearchResult,
+  CreateSessionResponse,
+  AskResponse,
+  FileMetadata,
+  DocumentSession,
+  ConversationEntry,
+};

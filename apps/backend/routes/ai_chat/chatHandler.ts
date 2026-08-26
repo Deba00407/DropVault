@@ -1,13 +1,7 @@
 
-/* 
-    Chat handler is responsible for:
-
-    1. Take user prompts
-    2. Send over the user prompts to ai server
-    3. Get back chunks data from ai server
-    4. Retrieve chunk data from db for the received details
-    5. Send back to client
-*/
+import { and, eq } from "drizzle-orm";
+import { db } from "../../db";
+import { documentChunks } from "../../schema";
 
 const baseUrl = process.env.AI_SERVER_URL!
 
@@ -21,11 +15,13 @@ type IncomingPointsResponse = {
     results: SearchResult[];
 };
 
+type DocumentChunk = typeof documentChunks.$inferSelect;
+
 class ChatHandler {
 
-    async getRequiredChunksForModelContext(user_query: string, limit: number = 10): Promise<SearchResult[]> {
+    async getRequiredChunksForModelContext(user_query: string, limit: number = 10): Promise<DocumentChunk[]> {
         try {
-            const points_response = await fetch(`${baseUrl}/query`, {
+            const points_response = await fetch(`${baseUrl}/generate/embeddings/query`, {
                 method: "POST",
                 headers: {
                     "Content-Type": "application/json",
@@ -45,7 +41,32 @@ class ChatHandler {
 
             const points = await points_response.json() as IncomingPointsResponse;
 
-            return points.results;
+            // get appropriate chunks from chunked db corresponding to points
+
+            const chunks: DocumentChunk[] = [];
+
+            for (const point of points.results) {
+
+                const chunk = await db
+                    .select()
+                    .from(documentChunks)
+                    .where(
+                        and(
+                            eq(
+                                documentChunks.documentId,
+                                point.document_id
+                            ),
+                            eq(
+                                documentChunks.chunkIndex,
+                                point.chunk_index
+                            )
+                        )
+                    );
+
+                chunks.push(...chunk);
+            }
+
+            return chunks;
 
         } catch (error) {
             console.error("Failed to retrieve relevant chunks:", error);

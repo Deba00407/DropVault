@@ -15,7 +15,7 @@ import {
 
 const navItems = [
   { href: "/dashboard", label: "Upload", icon: UploadSimple },
-  { href: "/chat", label: "Chat", icon: ChatCircle },
+  { href: "/documents/select", label: "Chat", icon: ChatCircle },
   { href: "/documents", label: "Documents", icon: Files },
 ];
 
@@ -33,7 +33,7 @@ const NavBar = () => {
   return (
     <nav className="flex items-center gap-1">
       {navItems.map((item) => {
-        const isActive = pathname === item.href;
+        const isActive = pathname === item.href || (item.href === "/documents/select" && pathname === "/chat");
         const Icon = item.icon;
 
         return (

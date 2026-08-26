@@ -1,12 +1,13 @@
 "use client";
 
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import { Button } from "@/components/ui/button";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { Skeleton } from "@/components/ui/skeleton";
 import { ChatMessage } from "./ChatMessage";
-import { askAI } from "@/lib/api";
-import { PaperPlaneRight } from "@phosphor-icons/react";
+import { useWebSocket } from "./useWebSocket";
+import { getSessionConversations } from "@/lib/api";
+import { PaperPlaneRight, WifiSlash } from "@phosphor-icons/react";
 import { cn } from "@/lib/utils";
 
 type Message = {
@@ -16,16 +17,30 @@ type Message = {
   timestamp: string;
 };
 
+type ChunkData = {
+  chunkIndex: number;
+  content: string;
+  documentId: string;
+};
+
 type ChatInterfaceProps = {
-  sessionId: string | null;
+  sessionId: string;
 };
 
 const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
   const [messages, setMessages] = useState<Message[]>([]);
   const [inputValue, setInputValue] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
+  const [isLoadingResponse, setIsLoadingResponse] = useState(false);
+  const [isLoadingHistory, setIsLoadingHistory] = useState(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const loadedSessionRef = useRef<string | null>(null);
+
+  const { isConnected, isConnecting, sendMessage, addMessageListener } =
+    useWebSocket({
+      sessionId,
+      enabled: !!sessionId,
+    });
 
   useEffect(() => {
     if (scrollRef.current) {
@@ -34,51 +49,91 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
   }, [messages]);
 
   useEffect(() => {
-    setMessages([]);
-    setInputValue("");
-  }, [sessionId]);
+    const unsub1 = addMessageListener("chunks_retrieved", (msg) => {
+      setIsLoadingResponse(false);
+      const chunks = msg.chunks as ChunkData[];
+      const modelContent = formatChunks(chunks);
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault();
-    const query = inputValue.trim();
-    if (!query || isLoading) return;
-
-    const userMessage: Message = {
-      id: `msg-${Date.now()}`,
-      content: query,
-      type: "user",
-      timestamp: new Date().toISOString(),
-    };
-
-    setMessages((prev) => [...prev, userMessage]);
-    setInputValue("");
-    setIsLoading(true);
-
-    if (textareaRef.current) {
-      textareaRef.current.style.height = "auto";
-    }
-
-    try {
-      const response = await askAI(query);
       const modelMessage: Message = {
-        id: `msg-${Date.now() + 1}`,
-        content: formatSearchResults(response.response),
+        id: `msg-${Date.now()}`,
+        content: modelContent,
         type: "model",
-        timestamp: new Date().toISOString(),
+        timestamp: (msg.timestamp as string) || new Date().toISOString(),
       };
       setMessages((prev) => [...prev, modelMessage]);
-    } catch (error) {
+    });
+
+    const unsub2 = addMessageListener("error", (msg) => {
+      setIsLoadingResponse(false);
       const errorMessage: Message = {
-        id: `msg-${Date.now() + 1}`,
-        content: "Sorry, I encountered an error processing your request. Please try again.",
+        id: `msg-${Date.now()}`,
+        content:
+          (msg.message as string) ||
+          "Sorry, I encountered an error processing your request.",
         type: "model",
         timestamp: new Date().toISOString(),
       };
       setMessages((prev) => [...prev, errorMessage]);
-    } finally {
-      setIsLoading(false);
-    }
-  };
+    });
+
+    return () => {
+      unsub1();
+      unsub2();
+    };
+  }, [addMessageListener]);
+
+  useEffect(() => {
+    if (!sessionId || loadedSessionRef.current === sessionId) return;
+
+    loadedSessionRef.current = sessionId;
+    setIsLoadingHistory(true);
+    setMessages([]);
+    setInputValue("");
+    setIsLoadingResponse(false);
+
+    getSessionConversations(sessionId)
+      .then((data) => {
+        const loaded: Message[] = data.conversations.map((c) => ({
+          id: c.id,
+          content: c.content,
+          type: c.conversation_type,
+          timestamp: c.created_at,
+        }));
+        setMessages(loaded);
+      })
+      .catch(() => {
+        // history unavailable, start fresh
+      })
+      .finally(() => {
+        setIsLoadingHistory(false);
+      });
+  }, [sessionId]);
+
+  const handleSubmit = useCallback(
+    (e: React.FormEvent) => {
+      e.preventDefault();
+      const query = inputValue.trim();
+      if (!query || isLoadingResponse || !isConnected) return;
+
+      const userMessage: Message = {
+        id: `msg-${Date.now()}`,
+        content: query,
+        type: "user",
+        timestamp: new Date().toISOString(),
+      };
+
+      setMessages((prev) => [...prev, userMessage]);
+      setInputValue("");
+      setIsLoadingResponse(true);
+
+      if (textareaRef.current) {
+        textareaRef.current.style.height = "auto";
+      }
+
+      sendMessage(query);
+    },
+    [inputValue, isLoadingResponse, isConnected, sendMessage]
+  );
 
   const handleKeyDown = (e: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === "Enter" && !e.shiftKey) {
@@ -93,22 +148,48 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
     e.target.style.height = `${Math.min(e.target.scrollHeight, 120)}px`;
   };
 
+  const connectionStatus = !isConnected && !isConnecting;
+  const inputDisabled = !sessionId || isLoadingResponse || !isConnected;
+
   return (
     <div className="flex h-full flex-col bg-[#F4F1E8]">
+      {connectionStatus && sessionId && (
+        <div className="flex items-center gap-2 border-b border-[#DBD5C6] bg-amber-50 px-4 py-2 text-xs text-amber-700">
+          <WifiSlash className="h-3.5 w-3.5" weight="fill" />
+          Reconnecting to server...
+        </div>
+      )}
+
       <div ref={scrollRef} className="flex-1 overflow-y-auto">
         <ScrollArea className="h-full">
-          {messages.length === 0 ? (
+          {isLoadingHistory ? (
+            <div className="space-y-3 px-4 py-6">
+              {Array.from({ length: 4 }).map((_, i) => (
+                <div key={i} className="flex gap-3">
+                  <Skeleton className="h-8 w-8 shrink-0 rounded-full bg-[#E7E2D3]" />
+                  <Skeleton className="h-16 w-64 rounded-xl bg-[#E7E2D3]" />
+                </div>
+              ))}
+            </div>
+          ) : messages.length === 0 ? (
             <div className="flex h-full flex-col items-center justify-center px-4 py-20 text-center">
               <div className="mb-4 flex size-16 items-center justify-center rounded-full bg-[#EFE9D8]">
                 <span className="font-serif text-2xl text-[#B54708]">?</span>
               </div>
               <h3 className="font-serif text-lg font-medium text-[#1C1B18]">
-                Ask about your documents
+                Ask about this document
               </h3>
               <p className="mt-1 max-w-sm text-sm text-[#8A8370]">
-                Query your uploaded PDFs using natural language. The AI will search
-                through your documents and find relevant information.
+                Query your PDF using natural language. The AI will search
+                through the document and find relevant chunks of information.
               </p>
+              {!isConnected && (
+                <p className="mt-3 text-xs text-amber-600">
+                  {isConnecting
+                    ? "Connecting to server..."
+                    : "Waiting for connection..."}
+                </p>
+              )}
             </div>
           ) : (
             <div className="space-y-1 py-4">
@@ -120,7 +201,7 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
                   timestamp={message.timestamp}
                 />
               ))}
-              {isLoading && (
+              {isLoadingResponse && (
                 <div className="flex gap-3 px-4 py-3">
                   <Skeleton className="h-8 w-8 rounded-full bg-[#E7E2D3]" />
                   <div className="space-y-2 rounded-xl bg-white border border-[#DBD5C6] px-4 py-3">
@@ -141,8 +222,12 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
             value={inputValue}
             onChange={handleInput}
             onKeyDown={handleKeyDown}
-            placeholder={sessionId ? "Ask about your documents..." : "Select or create a session first"}
-            disabled={!sessionId || isLoading}
+            placeholder={
+              isConnected
+                ? "Ask about this document..."
+                : "Connecting to server..."
+            }
+            disabled={inputDisabled}
             rows={1}
             className={cn(
               "flex-1 resize-none rounded-lg border border-[#DBD5C6] bg-[#FBFAF4] px-4 py-2.5 text-sm text-[#1C1B18] placeholder:text-[#C9C2AC] outline-none transition-colors",
@@ -152,7 +237,7 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
           />
           <Button
             type="submit"
-            disabled={!sessionId || !inputValue.trim() || isLoading}
+            disabled={inputDisabled || !inputValue.trim()}
             className="shrink-0 bg-[#B54708] text-white hover:bg-[#9A3D07] disabled:bg-[#C9C2AC]"
             size="icon"
           >
@@ -167,25 +252,16 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
   );
 };
 
-function formatSearchResults(results: Array<{ point_score: number; document_id: string; chunk_index: number }>): string {
-  if (!results || results.length === 0) {
-    return "I couldn't find any relevant information in your documents for this query.";
+function formatChunks(chunks: ChunkData[]): string {
+  if (!chunks || chunks.length === 0) {
+    return "I couldn't find any relevant information in this document for your query.";
   }
 
-  const sorted = [...results].sort((a, b) => b.point_score - a.point_score);
-  const topResults = sorted.slice(0, 3);
-
-  let response = "Based on your documents, here's what I found:\n\n";
-  topResults.forEach((result, index) => {
-    const score = Math.round(result.point_score * 100);
-    response += `${index + 1}. Relevant content from document (confidence: ${score}%)\n`;
-    response += `   Document ID: ${result.document_id.slice(0, 8)}...\n`;
-    response += `   Chunk position: ${result.chunk_index}\n\n`;
+  let response = "Here are the relevant chunks from the document:\n\n";
+  chunks.forEach((chunk, index) => {
+    response += `--- Chunk ${index + 1} (Document: ${chunk.documentId.slice(0, 8)}..., Index: ${chunk.chunkIndex}) ---\n`;
+    response += `${chunk.content}\n\n`;
   });
-
-  if (results.length > 3) {
-    response += `\n...and ${results.length - 3} more relevant sections found.`;
-  }
 
   return response;
 }

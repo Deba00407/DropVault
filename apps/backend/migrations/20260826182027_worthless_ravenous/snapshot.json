@@ -1,7 +1,7 @@
 {
   "version": "8",
   "dialect": "postgres",
-  "id": "b3c52fe6-1473-4ca0-b533-3076149fafc4",
+  "id": "2b5690b9-7fcd-476c-9738-a0bc7342b095",
   "prevIds": [
     "00000000-0000-0000-0000-000000000000"
   ],
@@ -636,6 +636,19 @@
       "table": "conversations"
     },
     {
+      "type": "text",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "content",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "conversations"
+    },
+    {
       "type": "timestamp with time zone",
       "typeSchema": null,
       "notNull": true,
@@ -813,6 +826,19 @@
       "generated": null,
       "identity": null,
       "name": "user_id",
+      "entityType": "columns",
+      "schema": "public",
+      "table": "session_data"
+    },
+    {
+      "type": "uuid",
+      "typeSchema": null,
+      "notNull": true,
+      "dimensions": 0,
+      "default": null,
+      "generated": null,
+      "identity": null,
+      "name": "document_id",
       "entityType": "columns",
       "schema": "public",
       "table": "session_data"
@@ -1032,6 +1058,23 @@
       "onUpdate": "NO ACTION",
       "onDelete": "CASCADE",
       "name": "session_data_user_id_users_id_fkey",
+      "entityType": "fks",
+      "schema": "public",
+      "table": "session_data"
+    },
+    {
+      "nameExplicit": false,
+      "columns": [
+        "document_id"
+      ],
+      "schemaTo": "public",
+      "tableTo": "file_metadata",
+      "columnsTo": [
+        "id"
+      ],
+      "onUpdate": "NO ACTION",
+      "onDelete": "CASCADE",
+      "name": "session_data_document_id_file_metadata_id_fkey",
       "entityType": "fks",
       "schema": "public",
       "table": "session_data"

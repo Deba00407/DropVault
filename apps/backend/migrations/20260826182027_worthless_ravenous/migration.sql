@@ -59,6 +59,7 @@ CREATE TABLE "conversations" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"session_id" uuid NOT NULL,
 	"conversation_type" "response_type" NOT NULL,
+	"content" text NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -79,6 +80,7 @@ CREATE TABLE "session_data" (
 	"id" uuid PRIMARY KEY DEFAULT gen_random_uuid(),
 	"title" varchar(100) NOT NULL,
 	"user_id" text NOT NULL,
+	"document_id" uuid NOT NULL,
 	"created_at" timestamp with time zone DEFAULT now() NOT NULL,
 	"updated_at" timestamp with time zone DEFAULT now() NOT NULL
 );
@@ -92,4 +94,5 @@ ALTER TABLE "sessions" ADD CONSTRAINT "sessions_user_id_users_id_fkey" FOREIGN K
 ALTER TABLE "document_chunks" ADD CONSTRAINT "document_chunks_document_id_file_metadata_id_fkey" FOREIGN KEY ("document_id") REFERENCES "file_metadata"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "conversations" ADD CONSTRAINT "conversations_session_id_session_data_id_fkey" FOREIGN KEY ("session_id") REFERENCES "session_data"("id") ON DELETE CASCADE;--> statement-breakpoint
 ALTER TABLE "file_metadata" ADD CONSTRAINT "file_metadata_owner_id_users_id_fkey" FOREIGN KEY ("owner_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
-ALTER TABLE "session_data" ADD CONSTRAINT "session_data_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;
+ALTER TABLE "session_data" ADD CONSTRAINT "session_data_user_id_users_id_fkey" FOREIGN KEY ("user_id") REFERENCES "users"("id") ON DELETE CASCADE;--> statement-breakpoint
+ALTER TABLE "session_data" ADD CONSTRAINT "session_data_document_id_file_metadata_id_fkey" FOREIGN KEY ("document_id") REFERENCES "file_metadata"("id") ON DELETE CASCADE;

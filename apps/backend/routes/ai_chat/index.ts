@@ -10,15 +10,15 @@ const chatRouter = Router();
 
 // generate a new session
 chatRouter.post("/create/chat-session", async (req: Request, res: Response) => {
-    const parsed = createSessionSchema.safeParse(req.body);
+    const { title, documentId } = req.body;
 
-    if (!parsed.success) {
+    if (!title || typeof title !== "string" || !documentId || typeof documentId !== "string") {
         return res
             .status(StatusCodes.BAD_REQUEST)
             .json(
                 {
                     success: false,
-                    error: parsed.error.flatten
+                    error: "title and documentId are required"
                 }
             )
     }
@@ -28,14 +28,16 @@ chatRouter.post("/create/chat-session", async (req: Request, res: Response) => {
         const new_chat_session = await db.insert(SessionDataModel)
             .values({
                 user_id: req.userId,
-                title: parsed.data.title
+                title,
+                document_id: documentId
             })
+            .returning()
 
         return res.
             status(StatusCodes.CREATED)
             .json({
                 success: true,
-                new_chat_session
+                new_chat_session: new_chat_session[0]
             })
 
     } catch (error) {

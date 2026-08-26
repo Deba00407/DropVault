@@ -1,6 +1,7 @@
 import {
     pgTable,
     uuid,
+    text,
     timestamp,
 } from "drizzle-orm/pg-core";
 import { SessionDataModel } from "./sessionDataModel";
@@ -18,6 +19,8 @@ export const ConversationDataModel = pgTable("conversations", {
         }),
 
     conversation_type: conversationType("conversation_type").notNull(),
+
+    content: text("content").notNull(),
 
     createdAt: timestamp("created_at", {
         withTimezone: true,

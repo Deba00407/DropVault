@@ -6,6 +6,7 @@ import {
     text,
 } from "drizzle-orm/pg-core";
 import { users } from "../auth-schema";
+import { fileMetadata } from "./fileMetaDataModel";
 
 export const SessionDataModel = pgTable("session_data", {
     id: uuid("id")
@@ -19,6 +20,12 @@ export const SessionDataModel = pgTable("session_data", {
     user_id: text("user_id")
         .notNull()
         .references(() => users.id, {
+            onDelete: "cascade"
+        }),
+
+    document_id: uuid("document_id")
+        .notNull()
+        .references(() => fileMetadata.id, {
             onDelete: "cascade"
         }),
 
