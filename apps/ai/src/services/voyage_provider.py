@@ -7,11 +7,24 @@ client = voyageai.Client(
 
 model = os.getenv("MODEL")
 
-def generate_embeddings(texts: list[str]) -> list[list[float]]:
-    result = client.embed(
-        texts,
-        model=model,
-        input_type="document", # specify to differentiate user prompt from resource embeddings
-    )
+class VoyagerHandler():
 
-    return result.embeddings
+    async def generate_embeddings(self, texts: list[str]) -> list[list[float]]:
+        result = client.embed(
+            texts,
+            model=model,
+            input_type="document", # specify to differentiate user prompt from resource embeddings
+        )
+
+        return result.embeddings
+
+    async def generate_query_embeddings(self, user_query: str) -> list[float]:
+        result = client.embed(
+            [user_query], # condense into 1 to make batch query
+            model = model,
+            input_type= "query"
+        )
+
+        return result.embeddings[0]
+
+voyager_handler = VoyagerHandler()

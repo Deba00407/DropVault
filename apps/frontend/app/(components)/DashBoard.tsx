@@ -67,7 +67,6 @@ function uploadWithProgress(
     console.log("XHR created");
 
     xhr.upload.onprogress = (e) => {
-      console.log("S3 progress", e.loaded, e.total);
 
       if (e.lengthComputable) {
         onProgress(

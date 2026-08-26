@@ -25,7 +25,11 @@ class EmbeddingsHandler:
         points = [
             PointStruct(
                 id = chunk.id,
-                vector = chunk.embedding
+                vector = chunk.embedding,
+                payload={
+                    "document_id": chunk.document_id,
+                    "chunk_index": chunk.chunk_index # store the chunk index and document id as payload so we can query postgres chunks for the right data required
+                }
             ) 
             for chunk in res.chunks
         ]
@@ -34,7 +38,16 @@ class EmbeddingsHandler:
 
         return operation_info
 
-    async def query_collection(self):
+    # By default return the top 5 best results based on similarity search from vector DB
+    async def query_collection(self, query_vector: list[float], limit: int = 5):
         print('collection was queried: ', collection)
+
+        response = await client.query_points(
+            collection_name = collection,
+            query = query_vector,
+            limit = limit
+        )
+
+        return response.points
 
 embeddings_handler = EmbeddingsHandler()
