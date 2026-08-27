@@ -9,6 +9,8 @@ import { eq, and } from "drizzle-orm";
 import { SessionDataModel } from "../models/sessionDataModel";
 import { ConversationDataModel } from "../models/conversationDataModel";
 import { chatHandler } from "../routes/ai_chat/chatHandler";
+import { promptGenerator, type GeneratedPromptType } from "../routes/ai_chat/promptGenerator";
+import { LLMHandler } from "../routes/ai_chat/llmHandler";
 
 type BufferedMessage = {
   sessionId: string;
@@ -93,10 +95,44 @@ export class WebSocketHandler {
         await this.flushMessages();
       }
 
-      const chunks = await chatHandler.getRequiredChunksForModelContext(
+      const [sessionRow] = await db
+        .select()
+        .from(SessionDataModel)
+        .where(
+          and(
+            eq(SessionDataModel.id, client.sessionId),
+            eq(SessionDataModel.user_id, client.userId)
+          )
+        )
+        .limit(1);
+
+      if (!sessionRow) {
+        console.error(
+          `[WS] Rejected: session ${client.sessionId} does not belong to user ${client.userId}`
+        );
+        return;
+      }
+
+      const points = await chatHandler.getRequiredPointsForModelContext(
         content,
+        sessionRow.document_id,
         limit
       );
+
+      const chunks = await chatHandler.getChunksFromDatabase(points);
+
+      // generate system prompt
+      const prompt: GeneratedPromptType = await promptGenerator.generatePrompt(chunks, content);
+
+      const llmHandler = LLMHandler.getInstance();
+
+      // stream the llm response to the web socket layer
+      for await (const event of llmHandler.generateStream(prompt)){
+        this.send(client, {
+          type: "llm_event",
+          event
+        })
+      };
 
       const chunksPayload = chunks.map((c) => ({
         chunkIndex: c.chunkIndex,

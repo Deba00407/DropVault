@@ -5,21 +5,31 @@ import { documentChunks } from "../../schema";
 
 const baseUrl = process.env.AI_SERVER_URL!
 
-type SearchResult = {
+export type SearchResult = {
     point_score: number;
     document_id: string;
     chunk_index: number;
 };
 
-type IncomingPointsResponse = {
+export type IncomingPointsResponse = {
     results: SearchResult[];
 };
 
-type DocumentChunk = typeof documentChunks.$inferSelect;
+export type DocumentChunk = typeof documentChunks.$inferSelect;
 
 class ChatHandler {
 
-    async getRequiredChunksForModelContext(user_query: string, limit: number = 10): Promise<DocumentChunk[]> {
+    static instance : ChatHandler | null = null;
+
+    constructor(){
+        if(ChatHandler.instance){
+            return ChatHandler.instance;
+        }
+
+        ChatHandler.instance = this;
+    }
+
+    async getRequiredPointsForModelContext(user_query: string, document_id: string, limit: number = 10): Promise<SearchResult[]> {
         try {
             const points_response = await fetch(`${baseUrl}/generate/embeddings/query`, {
                 method: "POST",
@@ -28,6 +38,7 @@ class ChatHandler {
                 },
                 body: JSON.stringify({
                     query: user_query,
+                    document_id,
                     limit: limit,
                 }),
             });
@@ -41,11 +52,21 @@ class ChatHandler {
 
             const points = await points_response.json() as IncomingPointsResponse;
 
-            // get appropriate chunks from chunked db corresponding to points
+            return points.results;
 
+        } catch (error) {
+            console.error("Failed to retrieve relevant chunks:", error);
+            throw error;
+        }
+    }
+
+    async getChunksFromDatabase(points: SearchResult[]): Promise<DocumentChunk[]>{
+        // get appropriate chunks from chunked db corresponding to points
+
+        try {
             const chunks: DocumentChunk[] = [];
 
-            for (const point of points.results) {
+            for (const point of points) {
 
                 const chunk = await db
                     .select()
@@ -69,7 +90,7 @@ class ChatHandler {
             return chunks;
 
         } catch (error) {
-            console.error("Failed to retrieve relevant chunks:", error);
+            console.error("Failed to retrieve relevant chunks from queried points:", error);
             throw error;
         }
     }

@@ -1,7 +1,7 @@
 import os
 from qdrant_client import AsyncQdrantClient
 
-from qdrant_client.models import VectorParams, PointStruct, Distance, UpdateResult
+from qdrant_client.models import Filter, VectorParams, FieldCondition, MatchValue, PointStruct, Distance, UpdateResult
 
 from models.embedding.embedding_response import EmbeddingResponse
 
@@ -39,12 +39,22 @@ class EmbeddingsHandler:
         return operation_info
 
     # By default return the top 5 best results based on similarity search from vector DB
-    async def query_collection(self, query_vector: list[float], limit: int = 5):
+    async def query_collection(self, query_vector: list[float], document_id: str, limit: int = 5):
         print('collection was queried: ', collection)
 
         response = await client.query_points(
             collection_name = collection,
             query = query_vector,
+            query_filter=Filter(
+                must = [
+                    FieldCondition(
+                        key = "document_id",
+                        match = MatchValue(
+                            value = str(document_id)
+                        )
+                    )
+                ]
+            ),
             limit = limit
         )
 

@@ -51,11 +51,12 @@ async def generate_embeddings_and_store_in_collection(request: EmbeddingRequest)
 @router.post("/query", response_model=SearchResponse)
 async def query_embedded_collection(request: SearchRequest):
 
-    print("1. Received query:", request.query)
-
     query_vectors = await voyager_handler.generate_query_embeddings(request.query)
 
-    points = await embeddings_handler.query_collection(query_vectors, request.limit)
+    # Filter points by document id
+    points = await embeddings_handler.query_collection(
+        query_vectors, request.document_id, request.limit 
+    )
 
     return SearchResponse(
         results=[

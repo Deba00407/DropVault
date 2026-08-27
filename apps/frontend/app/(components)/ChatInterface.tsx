@@ -15,6 +15,7 @@ type Message = {
   content: string;
   type: "user" | "model";
   timestamp: string;
+  thinkingContent?: string;
 };
 
 type ChunkData = {
@@ -36,6 +37,14 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const loadedSessionRef = useRef<string | null>(null);
 
+  const streamingTextRef = useRef("");
+  const thinkingTextRef = useRef("");
+  const isThinkingRef = useRef(false);
+  const [streamingText, setStreamingText] = useState("");
+  const [thinkingText, setThinkingText] = useState("");
+  const [isThinking, setIsThinking] = useState(false);
+  const [isStreaming, setIsStreaming] = useState(false);
+
   const { isConnected, isConnecting, sendMessage, addMessageListener } =
     useWebSocket({
       sessionId,
@@ -46,25 +55,84 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
     if (scrollRef.current) {
       scrollRef.current.scrollTop = scrollRef.current.scrollHeight;
     }
-  }, [messages]);
+  }, [messages, streamingText, thinkingText]);
 
   useEffect(() => {
-    const unsub1 = addMessageListener("chunks_retrieved", (msg) => {
+    const unsubLlm = addMessageListener("llm_event", (msg) => {
+      const event = msg.event as Record<string, unknown> | undefined;
+      if (!event) return;
+
+      const eventType = event.event_type as string;
+
+      if (eventType === "step.start") {
+        const step = event.step as Record<string, unknown> | undefined;
+        if (step && step.thought !== undefined) {
+          isThinkingRef.current = true;
+          setIsThinking(true);
+          thinkingTextRef.current = "";
+          setThinkingText("");
+        }
+      } else if (eventType === "step.delta") {
+        const delta = event.delta as Record<string, unknown> | undefined;
+        if (!delta) return;
+
+        if (delta.type === "thought_summary" || delta.type === "thought") {
+          thinkingTextRef.current += (delta.text as string) || "";
+          setThinkingText(thinkingTextRef.current);
+        } else if (delta.type === "text") {
+          if (isThinkingRef.current) {
+            isThinkingRef.current = false;
+            setIsThinking(false);
+          }
+          streamingTextRef.current += (delta.text as string) || "";
+          setStreamingText(streamingTextRef.current);
+          setIsStreaming(true);
+        }
+      } else if (eventType === "step.stop") {
+        if (isThinkingRef.current) {
+          isThinkingRef.current = false;
+          setIsThinking(false);
+        }
+      }
+    });
+
+    const unsubChunks = addMessageListener("chunks_retrieved", (msg) => {
       setIsLoadingResponse(false);
-      const chunks = msg.chunks as ChunkData[];
-      const modelContent = formatChunks(chunks);
+      setIsStreaming(false);
+
+      const finalContent =
+        streamingTextRef.current ||
+        formatChunks(msg.chunks as ChunkData[]);
 
       const modelMessage: Message = {
         id: `msg-${Date.now()}`,
-        content: modelContent,
+        content: finalContent,
         type: "model",
         timestamp: (msg.timestamp as string) || new Date().toISOString(),
+        thinkingContent: thinkingTextRef.current || undefined,
       };
+
       setMessages((prev) => [...prev, modelMessage]);
+
+      streamingTextRef.current = "";
+      thinkingTextRef.current = "";
+      isThinkingRef.current = false;
+      setStreamingText("");
+      setThinkingText("");
+      setIsThinking(false);
     });
 
-    const unsub2 = addMessageListener("error", (msg) => {
+    const unsubError = addMessageListener("error", (msg) => {
       setIsLoadingResponse(false);
+      setIsStreaming(false);
+
+      streamingTextRef.current = "";
+      thinkingTextRef.current = "";
+      isThinkingRef.current = false;
+      setStreamingText("");
+      setThinkingText("");
+      setIsThinking(false);
+
       const errorMessage: Message = {
         id: `msg-${Date.now()}`,
         content:
@@ -77,8 +145,9 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
     });
 
     return () => {
-      unsub1();
-      unsub2();
+      unsubLlm();
+      unsubChunks();
+      unsubError();
     };
   }, [addMessageListener]);
 
@@ -91,6 +160,14 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
     setInputValue("");
     setIsLoadingResponse(false);
 
+    streamingTextRef.current = "";
+    thinkingTextRef.current = "";
+    isThinkingRef.current = false;
+    setStreamingText("");
+    setThinkingText("");
+    setIsThinking(false);
+    setIsStreaming(false);
+
     getSessionConversations(sessionId)
       .then((data) => {
         const loaded: Message[] = data.conversations.map((c) => ({
@@ -101,9 +178,7 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
         }));
         setMessages(loaded);
       })
-      .catch(() => {
-        // history unavailable, start fresh
-      })
+      .catch(() => {})
       .finally(() => {
         setIsLoadingHistory(false);
       });
@@ -125,6 +200,14 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
       setMessages((prev) => [...prev, userMessage]);
       setInputValue("");
       setIsLoadingResponse(true);
+
+      streamingTextRef.current = "";
+      thinkingTextRef.current = "";
+      isThinkingRef.current = false;
+      setStreamingText("");
+      setThinkingText("");
+      setIsThinking(false);
+      setIsStreaming(false);
 
       if (textareaRef.current) {
         textareaRef.current.style.height = "auto";
@@ -150,6 +233,7 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
 
   const connectionStatus = !isConnected && !isConnecting;
   const inputDisabled = !sessionId || isLoadingResponse || !isConnected;
+  const isActivelyStreaming = isThinking || isStreaming;
 
   return (
     <div className="flex h-full flex-col bg-[#F4F1E8]">
@@ -199,9 +283,11 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
                   content={message.content}
                   type={message.type}
                   timestamp={message.timestamp}
+                  thinkingContent={message.thinkingContent}
                 />
               ))}
-              {isLoadingResponse && (
+
+              {isLoadingResponse && !isActivelyStreaming && (
                 <div className="flex gap-3 px-4 py-3">
                   <Skeleton className="h-8 w-8 rounded-full bg-[#E7E2D3]" />
                   <div className="space-y-2 rounded-xl bg-white border border-[#DBD5C6] px-4 py-3">
@@ -209,6 +295,16 @@ const ChatInterface = ({ sessionId }: ChatInterfaceProps) => {
                     <Skeleton className="h-3 w-24 bg-[#E7E2D3]" />
                   </div>
                 </div>
+              )}
+
+              {isActivelyStreaming && (
+                <ChatMessage
+                  content={streamingText}
+                  type="model"
+                  thinkingContent={thinkingText}
+                  isThinking={isThinking}
+                  isStreaming={isStreaming}
+                />
               )}
             </div>
           )}
